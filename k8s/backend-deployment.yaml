@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: certificate-tracker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: 346273507930.dkr.ecr.ap-southeast-1.amazonaws.com/certificate-tracker/backend:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DATABASE_URL
+        - name: SERVER_PORT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: SERVER_PORT
+        - name: SMTP_PASS
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: SMTP_PASS
+        - name: SENDER_MAIL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: SENDER_MAIL
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_PORT
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_HOST
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_USER
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_NAME
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DB_PASSWORD
