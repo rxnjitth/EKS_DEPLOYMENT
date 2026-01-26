@@ -6,75 +6,173 @@ Production-ready deployment of Certificate Tracker application on AWS EKS (Elast
 
 ```mermaid
 flowchart TB
-    subgraph Docker["Docker Images"]
-        React[ReactJS<br/>Frontend]
-        Node[NodeJS<br/>Backend]
-        DB[MySQL/PostgreSQL<br/>Database]
+    Users["👥 Internet Users"]
+    
+    subgraph DevOps["🔧 Development & CI/CD"]
+        direction LR
+        ReactApp["⚛️ ReactJS App<br/>(Source Code)"]
+        NodeApp["🟢 NodeJS API<br/>(Source Code)"]
+        DBImage["🐘 PostgreSQL<br/>(Custom Image)"]
+        AdminImage["🔧 pgAdmin<br/>(Custom Image)"]
     end
     
-    subgraph ECR["Amazon ECR"]
-        ECRRepo[Container Registry<br/>346273507930.dkr.ecr.ap-southeast-1]
+    subgraph Build["📦 Docker Build Process"]
+        FrontendBuild["Frontend Build<br/>npm run build"]
+        BackendBuild["Backend Build<br/>npm install"]
+        DBBuild["DB Dockerfile<br/>+ init scripts"]
+        AdminBuild["pgAdmin Dockerfile"]
     end
     
-    React --> ECRRepo
-    Node --> ECRRepo
-    DB --> ECRRepo
+    subgraph ECR["☁️ Amazon ECR - Singapore"]
+        direction TB
+        FrontendImg["🔷 Frontend Image<br/>:latest"]
+        BackendImg["🔷 Backend Image<br/>:latest"]
+        PostgresImg["🔷 Postgres Image<br/>:latest"]
+        AdminImg["🔷 pgAdmin Image<br/>:latest"]
+    end
     
-    subgraph EKS["EKS Cluster - certificate-tracker"]
-        subgraph Storage["Storage Layer"]
-            Secrets[Secrets<br/>Credentials & Config]
-            PVC[PVC<br/>Persistent Volume]
-            SVC[SVC<br/>Services]
+    subgraph AWS["🌐 AWS Cloud - ap-southeast-1"]
+        subgraph VPC["Virtual Private Cloud (10.0.0.0/16)"]
+            subgraph PublicSubnet["Public Subnets (2 AZs)"]
+                IGW["🌐 Internet Gateway"]
+                NAT["🔀 NAT Gateway"]
+                ALB["⚖️ Application Load Balancers<br/>(3x AWS ELB)"]
+            end
+            
+            subgraph PrivateSubnet["Private Subnets (2 AZs)"]
+                subgraph EKS["🎯 EKS Cluster v1.30<br/>certificate-tracker"]
+                    subgraph ConfigLayer["Configuration Layer"]
+                        NS["📦 Namespace<br/>certificate-tracker"]
+                        Secrets["🔐 Secrets<br/>DB Credentials, SMTP"]
+                        PVC["💾 PVC - 10Gi<br/>gp2 EBS Volume"]
+                    end
+                    
+                    subgraph Workloads["Workload Layer"]
+                        subgraph FrontendDep["Frontend Deployment"]
+                            FE1["⚛️ Pod 1<br/>ReactJS:3000"]
+                            FE2["⚛️ Pod 2<br/>ReactJS:3000"]
+                        end
+                        
+                        subgraph BackendDep["Backend Deployment"]
+                            BE1["🟢 Pod 1<br/>NodeJS:5000"]
+                            BE2["🟢 Pod 2<br/>NodeJS:5000"]
+                        end
+                        
+                        subgraph DatabaseDep["Database Deployment"]
+                            PG["🐘 PostgreSQL<br/>Port: 5432<br/>DB: Kgcarv2"]
+                        end
+                        
+                        subgraph AdminDep["Admin Tool"]
+                            PGA["🔧 pgAdmin<br/>Port: 80"]
+                        end
+                    end
+                    
+                    subgraph ServiceLayer["Service Layer"]
+                        FESvc["Frontend Service<br/>LoadBalancer:80→3000"]
+                        BESvc["Backend Service<br/>LoadBalancer:5000"]
+                        PGSvc["Postgres Service<br/>ClusterIP:5432"]
+                        PGASvc["pgAdmin Service<br/>LoadBalancer:80"]
+                    end
+                    
+                    subgraph NodeGroup["🖥️ EC2 Node Group"]
+                        Node1["t3.medium Node 1<br/>2 vCPU, 4GB RAM"]
+                        Node2["t3.medium Node 2<br/>2 vCPU, 4GB RAM"]
+                    end
+                end
+            end
         end
-        
-        subgraph Apps["Application Layer"]
-            FE1[Frontend Pod]
-            FE2[Frontend Pod]
-            BE1[Backend Pod]
-            BE2[Backend Pod]
-            PG[Database Pod]
-            PGA[pgAdmin Pod]
-        end
-        
-        LB[Load Balancer<br/>AWS ELB]
     end
     
-    ECRRepo --> FE1
-    ECRRepo --> FE2
-    ECRRepo --> BE1
-    ECRRepo --> BE2
-    ECRRepo --> PG
-    ECRRepo --> PGA
+    %% Build Process
+    ReactApp --> FrontendBuild
+    NodeApp --> BackendBuild
+    DBImage --> DBBuild
+    AdminImage --> AdminBuild
     
-    Secrets -.-> BE1
-    Secrets -.-> BE2
-    Secrets -.-> PG
-    Secrets -.-> PGA
+    FrontendBuild --> FrontendImg
+    BackendBuild --> BackendImg
+    DBBuild --> PostgresImg
+    AdminBuild --> AdminImg
     
-    PVC --> PG
+    %% ECR to Pods
+    FrontendImg -.->|Pull Image| FE1
+    FrontendImg -.->|Pull Image| FE2
+    BackendImg -.->|Pull Image| BE1
+    BackendImg -.->|Pull Image| BE2
+    PostgresImg -.->|Pull Image| PG
+    AdminImg -.->|Pull Image| PGA
     
-    FE1 --> BE1
-    FE2 --> BE2
-    BE1 --> PG
-    BE2 --> PG
+    %% Config to Pods
+    Secrets -.->|Inject Env| BE1
+    Secrets -.->|Inject Env| BE2
+    Secrets -.->|Inject Env| PG
+    Secrets -.->|Inject Env| PGA
+    PVC -.->|Mount Volume| PG
     
-    LB --> FE1
-    LB --> FE2
+    %% Pod Scheduling
+    FE1 & FE2 -.->|Scheduled on| Node1
+    BE1 & BE2 -.->|Scheduled on| Node2
+    PG & PGA -.->|Scheduled on| Node1
     
-    Internet([Internet Users]) --> LB
+    %% Service Connections
+    FE1 --> FESvc
+    FE2 --> FESvc
+    BE1 --> BESvc
+    BE2 --> BESvc
+    PG --> PGSvc
+    PGA --> PGASvc
     
-    style EKS fill:#ff6600,stroke:#ff6600,stroke-width:3px
-    style Storage fill:#4169E1,stroke:#4169E1,stroke-width:2px
-    style Apps fill:#1e3a5f,stroke:#4169E1,stroke-width:2px
-    style ECR fill:#ff9900,stroke:#ff9900,stroke-width:2px
+    %% Application Flow
+    FESvc -->|HTTP Requests| BESvc
+    BESvc -->|SQL Queries| PGSvc
+    PGASvc -->|Admin Queries| PGSvc
+    
+    %% Load Balancers
+    FESvc --> ALB
+    BESvc --> ALB
+    PGASvc --> ALB
+    
+    %% Internet Access
+    Users --> IGW
+    IGW --> ALB
+    NAT -.->|Outbound Traffic| IGW
+    Node1 & Node2 -.->|Internet via| NAT
+    
+    %% Styling
+    classDef frontend fill:#61dafb,stroke:#000,stroke-width:2px,color:#000
+    classDef backend fill:#68a063,stroke:#000,stroke-width:2px,color:#fff
+    classDef database fill:#336791,stroke:#000,stroke-width:2px,color:#fff
+    classDef aws fill:#ff9900,stroke:#000,stroke-width:3px,color:#000
+    classDef storage fill:#4169e1,stroke:#000,stroke-width:2px,color:#fff
+    classDef config fill:#9370db,stroke:#000,stroke-width:2px,color:#fff
+    
+    class FE1,FE2,FESvc,FrontendDep,ReactApp,FrontendImg,FrontendBuild frontend
+    class BE1,BE2,BESvc,BackendDep,NodeApp,BackendImg,BackendBuild backend
+    class PG,PGSvc,PGA,PGASvc,DatabaseDep,AdminDep,DBImage,PostgresImg,AdminImg,DBBuild,AdminBuild database
+    class ECR,ALB,IGW,NAT,AWS,VPC aws
+    class PVC,EBS storage
+    class Secrets,NS,ConfigLayer config
 ```
 
-**Component Details:**
-- **Frontend**: 2 replicas (ReactJS on port 3000)
-- **Backend**: 2 replicas (NodeJS on port 5000)
-- **Database**: 1 replica (PostgreSQL on port 5432)
-- **Storage**: 10Gi persistent volume (EBS gp2)
-- **Load Balancers**: AWS ELB for public access
+## Component Details
+
+### Application Tier
+| Component | Replicas | Technology | Port | Purpose |
+|-----------|----------|------------|------|---------|
+| **Frontend** | 2 | ReactJS | 3000 | User Interface |
+| **Backend** | 2 | NodeJS | 5000 | REST API & Business Logic |
+| **Database** | 1 | PostgreSQL | 5432 | Data Persistence |
+| **pgAdmin** | 1 | pgAdmin4 | 80 | Database Management |
+
+### Infrastructure Tier
+| Resource | Type | Specification | Purpose |
+|----------|------|---------------|---------|
+| **EKS Cluster** | v1.30 | Managed Kubernetes | Container Orchestration |
+| **Worker Nodes** | t3.medium | 2 vCPU, 4GB RAM | Application Runtime |
+| **Storage** | EBS gp2 | 10Gi | Database Persistence |
+| **Load Balancers** | AWS ELB | 3 instances | Public Access |
+| **VPC** | 10.0.0.0/16 | 2 Public + 2 Private Subnets | Network Isolation |
+| **ECR** | Private Registry | ap-southeast-1 | Container Images |
 
 **Infrastructure:**
 - **Cloud Provider**: AWS (Singapore - ap-southeast-1)
