@@ -1,0 +1,40 @@
+# Terraform Files
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform/
+.terraform.lock.hcl
+terraform.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Kubernetes Secrets (DO NOT COMMIT)
+secret.yaml
+*-secret.yaml
+
+# AWS & Environment
+.aws/
+*.pem
+*.key
+.env
+.env.*
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Backup files
+*.backup
+*.bak
