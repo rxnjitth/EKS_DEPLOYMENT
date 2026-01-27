@@ -21,7 +21,7 @@ variable "vpc_cidr" {
 variable "node_instance_type" {
   description = "EC2 instance type for worker nodes"
   type        = string
-  default     = "t3.medium"  # 2 vCPU, 4GB RAM
+  default     = "t2.micro"  # 1 vCPU, 1GB RAM
 }
 
 variable "desired_nodes" {
