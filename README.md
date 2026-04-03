@@ -266,7 +266,7 @@ kubectl get nodes
 cd ..
 
 # Deploy in order
-kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/names pace.yaml
 kubectl apply -f k8s/secret.yaml
 kubectl apply -f k8s/postgres-pvc.yaml
 kubectl apply -f k8s/postgres-deployment.yaml
