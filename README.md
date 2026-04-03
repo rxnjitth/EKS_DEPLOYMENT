@@ -6,7 +6,7 @@ Production-ready deployment of Certificate Tracker application on AWS EKS (Elast
 
 ```mermaid
 flowchart TB
-    Users["👥 Internet Users"]
+    Users["👥 Inter net Users"]
     
     subgraph DevOps["🔧 Development & CI/CD"]
         direction LR
