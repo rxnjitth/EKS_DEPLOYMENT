@@ -17,7 +17,6 @@ output "cluster_region" {
 
 
 output "configure_kubectl" {
-  
-  description = "Comm-and to configure kubectl"
+  description = "Command to configure kubectl"
   value       = "aws eks update-kubeconfig --region ap-southeast-1 --name ${aws_eks_cluster.main.name}"
 }
