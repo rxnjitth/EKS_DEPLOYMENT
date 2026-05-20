@@ -7,7 +7,7 @@ variable "cluster_name" {
 }
 
 variable "cluster_version" {
-  description = "Kubernetes version"
+  description = "Kubernetes version 2"
   type        = string
   default     = "1.30"  # Latest supported version (Jan 2026)
 }
