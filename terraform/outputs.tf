@@ -12,6 +12,7 @@ output "cluster_endpoint" {
 
 output "cluster_region" {
   description = "AWS region"
+  
   value       = "ap-southeast-1"
 }
 
